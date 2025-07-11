@@ -1,0 +1,21 @@
+{
+  "name": "राधा-कृष्ण सहायक",
+  "short_name": "सहायक",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fff3f7",
+  "theme_color": "#ffb6c1",
+  "description": "आपका व्यक्तिगत स्मार्ट रिमाइंडर सहायक।",
+  "icons": [
+    {
+      "src": "https://i.imgur.com/O6S3E2I.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://i.imgur.com/sT3aCZM.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
