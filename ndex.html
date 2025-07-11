@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Atma - Smart Reminder</title>
+    <style>
+        :root {
+            --bg-color: #fff3f7; --header-bg: #ffb6c1; --text-color: #333; --button-bg-radha: #f06292; --button-bg-krishna: #2196f3; --settings-bg: #fff0f0; --entry-bg: #f9f9f9; --entry-border: #eee; --list-item-bg: white; --shadow-color: rgba(0,0,0,0.3); --accent-color: var(--button-bg-radha);
+        }
+        body.dark-mode {
+            --bg-color: #2c3e50; --header-bg: #34495e; --text-color: #ecf0f1; --settings-bg: #34495e; --entry-bg: #2c3e50; --entry-border: #34495e; --list-item-bg: #3a506b; --shadow-color: rgba(255,255,255,0.2);
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-color); overflow-x: hidden; }
+        #welcome-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 5000; }
+        #welcome-box { background: white; color: #333; padding: 25px; border-radius: 15px; text-align: center; max-width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        body.dark-mode #welcome-box { background: var(--list-item-bg); color: var(--text-color); }
+        #welcome-box h2 { margin-top: 0; }
+        #start-app-btn { background-color: var(--accent-color); padding: 12px 25px; font-size: 18px; margin-top: 15px; }
+        .header { background-color: var(--header-bg); padding: 10px; text-align: center; position: relative; }
+        .settings-icon { position: absolute; right: 10px; top: 10px; cursor: pointer; font-size: 24px; z-index: 1000; }
+        .character-box { display: flex; flex-direction: column; align-items: center; margin-top: 15px; }
+        .character-circle { width: 120px; height: 120px; border-radius: 50%; background-size: cover; background-position: center; box-shadow: 0 0 10px var(--shadow-color); border: 4px solid var(--list-item-bg); }
+        .digital-clock { text-align: center; font-size: 24px; font-weight: bold; margin-top: 10px; }
+        .task-entry, .speaker-box { text-align: center; margin-top: 20px; padding: 0 15px; }
+        .task-entry textarea, .task-entry input[type="time"] { width: 90%; max-width: 400px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; background-color: var(--list-item-bg); color: var(--text-color); }
+        button { padding: 10px 16px; margin: 8px; border: none; color: white; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; }
+        #mainTaskBtn, #settingsPanel button[onclick="app.saveRoutine()"] { background-color: var(--accent-color); }
+        button:active { transform: scale(0.97); }
+        #speakerBox button.listening { animation: pulse 1.5s infinite; }
+        #settingsPanel { position: fixed; top: 0; right: -350px; width: 320px; height: 100%; max-height: 100vh; overflow-y: auto; background-color: var(--settings-bg); padding: 20px; box-shadow: -4px 0 12px rgba(0,0,0,0.15); z-index: 1002; transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        #settingsPanel.open { right: 0; }
+        #settingsPanel h4 { margin-top: 20px; border-bottom: 1px solid var(--entry-border); padding-bottom: 5px; }
+        select, #settingsPanel input[type="time"] { margin: 5px 0; padding: 8px; width: 100%; box-sizing: border-box; border-radius: 6px; border: 1px solid #ccc; background-color: var(--list-item-bg); color: var(--text-color); }
+        #taskManagerList ul { list-style-type: none; padding: 0; }
+        #taskManagerList li { background-color: var(--list-item-bg); padding: 8px; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .task-buttons button { font-size: 16px; padding: 2px 6px; margin: 0 4px; cursor: pointer; background: none; border: none; color: var(--text-color); }
+        .routine-entry { margin-bottom: 15px; background: var(--entry-bg); padding: 10px; border-radius: 8px; border: 1px solid var(--entry-border); }
+        .time-input-group { display: flex; gap: 10px; padding-left: 25px; }
+        .time-input-group > div { flex: 1; }
+        .time-input-group label { font-size: 12px; color: #666; display: block; margin-bottom: 4px;}
+        .theme-switch-wrapper { display: flex; align-items: center; margin-top: 15px; }
+        .theme-switch { display: inline-block; height: 24px; position: relative; width: 48px; }
+        .theme-switch input { display:none; }
+        .slider { background-color: #ccc; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; }
+        .slider:before { background-color: #fff; bottom: 2px; content: ""; height: 20px; left: 2px; position: absolute; transition: .4s; width: 20px; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(24px); }
+        .slider.round { border-radius: 24px; } .slider.round:before { border-radius: 50%; }
+        #alarmOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: none; justify-content: center; align-items: center; z-index: 2000; flex-direction: column; cursor: pointer;}
+        .alarm-box { background-color: var(--list-item-bg); padding: 30px 40px; border-radius: 15px; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.4); animation: shake 0.8s cubic-bezier(.36,.07,.19,.97) both infinite; width: 90%; max-width: 350px; }
+        .alarm-box h2 { font-size: 56px; margin: 0 0 15px 0; animation: pulse-emoji 1s infinite; }
+        #alarmText { font-size: 22px; color: var(--text-color); margin-bottom: 25px; font-weight: bold; }
+        #audio-prompt { font-size: 16px; color: #f39c12; margin-top: 15px; display: none; font-weight: bold; }
+        .alarm-buttons { display: flex; gap: 10px; width: 100%; margin-top: 20px; }
+        .alarm-buttons button { flex-grow: 1; font-size: 16px; padding: 12px 20px; border: none; color: white; border-radius: 8px; cursor: pointer; margin: 0; }
+        #stopAlarmBtn { background-color: #e74c3c; }
+        #snoozeBtn { background-color: #3498db; }
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1001; display: none; }
+        #toastNotification { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.75); color: white; padding: 12px 20px; border-radius: 25px; z-index: 3000; transition: bottom 0.5s ease; font-size: 14px; }
+        #toastNotification.show { bottom: 30px; }
+        @keyframes pulse-emoji { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+    </style>
+</head>
+<body>
+    <div id="welcome-overlay">
+        <div id="welcome-box">
+            <h2 data-lang-key="title">🌸 राधा-कृष्ण सहायक 🌸</h2>
+            <p data-lang-key="welcomePrompt">शुरू करने से पहले, कृपया आवाज़ को सक्रिय करने के लिए बटन दबाएं।</p>
+            <button id="start-app-btn" data-lang-key="startBtn">शुरू करें</button>
+        </div>
+    </div>
+    <div id="overlay" onclick="app.toggleSettings()"></div>
+    <div class="header"> <h2 data-lang-key="title">🌸 राधा-कृष्ण सहायक 🌸</h2> <div class="settings-icon" onclick="app.toggleSettings()">⚙️</div> </div>
+    <div class="character-box"> <div class="character-circle" id="characterDisplay"></div> <div style="font-weight:bold; margin-top:5px;" id="characterName">राधा</div> </div>
+    <div class="digital-clock" id="clock">00:00:00</div>
+    <div class="task-entry"> 
+        <h3 data-lang-key="taskHeading">📝 टास्क और समय जोड़ें</h3> 
+        <textarea id="taskInput" rows="2" placeholder="टास्क लिखें..."></textarea><br> 
+        <input type="time" id="taskTime"><br> 
+        <button id="mainTaskBtn" onclick="app.saveOrUpdateReminder()" data-lang-key="reminderBtn">⏰ Reminder सेट करें</button> 
+    </div>
+    <div class="speaker-box" id="speakerBox"> <button id="speakBtn" onclick="app.startListening()" data-lang-key="speakerPrompt">🎙️ बोलिए</button> <p id="outputText" style="display:none;"></p> </div>
+    <div id="settingsPanel">
+        <h3 data-lang-key="settingsHeading">⚙️ सेटिंग्स</h3>
+        <button onclick="app.toggleSettings()" style="position:absolute; top:10px; right:10px; font-size:24px; background:none; color:var(--text-color);">×</button>
+        <h4 data-lang-key="charSelection">👫 कैरेक्टर सिलेक्शन</h4>
+        <select id="characterSelect"> <option value="radha">राधा</option> <option value="krishna">कृष्ण</option> </select>
+        <h4 data-lang-key="langOption">🌐 भाषा विकल्प</h4>
+        <select id="languageSelect"> <option value="hi">हिंदी</option> <option value="en">English</option> </select>
+        <h4 data-lang-key="theme">🎨 थीम</h4>
+        <div class="theme-switch-wrapper">
+            <span style="margin-right:10px;">☀️</span>
+            <label class="theme-switch">
+                <input type="checkbox" id="theme-switch">
+                <span class="slider round"></span>
+            </label>
+            <span style="margin-left:10px;">🌙</span>
+        </div>
+        <h4 data-lang-key="taskManager">📁 टास्क मैनेजर</h4>
+        <button id="showTasksBtn" onclick="app.showTaskManager()" data-lang-key="showTasks">टास्क लिस्ट दिखाएं</button>
+        <div id="taskManagerList"></div>
+        <h4 data-lang-key="routineTitle">📅 डेली रूटीन</h4>
+        <div id="routineContainer"></div>
+        <button onclick="app.saveRoutine()" data-lang-key="saveRoutine">✅ रूटीन सेव करें</button>
+    </div>
+    <div id="alarmOverlay">
+        <div class="alarm-box">
+            <h2>⏰</h2>
+            <p id="alarmText">रिमाइंडर टेक्स्ट</p>
+            <p id="audio-prompt" data-lang-key="audioPrompt">आवाज़ के लिए स्क्रीन पर टैप करें!</p>
+            <div class="alarm-buttons">
+                <button id="snoozeBtn" onclick="app.snoozeReminder(event)" data-lang-key="snooze">5 मिनट बाद</button>
+                <button id="stopAlarmBtn" onclick="app.stopAlarm(event)" data-lang-key="stop">बंद करें</button>
+            </div>
+        </div>
+    </div>
+    <div id="toastNotification"></div>
+    <audio id="alarmSound" src="https://cdn.freesound.org/previews/219/219244_4032688-lq.mp3" preload="auto" loop></audio>
+    <audio id="confirmationSound" src="https://cdn.freesound.org/previews/187/187836_3432173-lq.mp3" preload="auto"></audio>
+
+<script>
+const app = (function() {
+    let elements = {};
+    let manualReminders = [];
+    let routines = {};
+    let snoozedReminders = [];
+    let currentLang = 'hi';
+    let currentCharacter = 'radha';
+    let isTaskManagerOpen = false;
+    let isAudioUnlocked = false;
+    let speechSynthSupported = ('speechSynthesis' in window);
+    let speechRecSupported = ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+    const STORAGE_VERSION = 'v26_master_final';
+    let editMode = { active: false, index: null };
+    let progressiveAlarmInterval = null;
+    let vibrationInterval = null;
+
+    const TRANSLATIONS = {
+        hi: { title: "🌸 राधा-कृष्ण सहायक 🌸", welcomePrompt: "शुरू करने से पहले, कृपया आवाज़ को सक्रिय करने के लिए बटन दबाएं।", startBtn: "शुरू करें", taskHeading: "📝 टास्क और समय जोड़ें", reminderBtn: "⏰ Reminder सेट करें", updateBtn: "💾 अपडेट करें", reminderUpdated: "रिमाइंडर अपडेट हो गया!", speakerPrompt: "🎙️ बोलिए", settingsHeading: "⚙️ सेटिंग्स", charSelection: "👫 कैरेक्टर सिलेक्शन", langOption: "🌐 भाषा विकल्प", taskManager: "📁 टास्क मैनेजर", showTasks: "टास्क लिस्ट दिखाएं", closeTasks: "टास्क लिस्ट बंद करें", snooze: "5 मिनट बाद", stop: "बंद करें", welcome: "नमस्ते, मैं आपकी सहायक हूँ।", reminderSet: "रिमाइंडर सेट हो गया!", snoozeSet: "अलार्म 5 मिनट बाद फिर बजेगा।", noReminders: "अभी कोई रिमाइंडर नहीं है.", theme: "🎨 थीम", morning_greet: "सुप्रभात!", afternoon_greet: "नमस्ते!", evening_greet: "शुभ संध्या!", routineTitle: "📅 डेली रूटीन", saveRoutine: "✅ रूटीन सेव करें", wake: "जागना", bath: "स्नान", school: "स्कूल जाना", meal: "खाना खाना", homework: "होमवर्क करना", chores: "घर का काम", alarm1: "अलार्म 1", alarm2: "अलार्म 2", deleteConfirm: "क्या आप वाकई इस रिमाइंडर को हटाना चाहते हैं?", speakListen: "सुन रही हूँ...", speakUnderstand: "ठीक है, अब समय सेट कर दीजिए।", speakError: "क्षमा करें, मैं समझ नहीं पाई।", speakWhat: "आप क्या याद दिलाना चाहते हैं?", alarmText: "अब {task} का समय हो गया है!", micPermission: "बोलकर टाइप करने के लिए माइक की अनुमति दें।", micNotFound: "आपके डिवाइस में माइक नहीं मिला।", audioPrompt: "आवाज़ के लिए स्क्रीन पर टैप करें!" },
+        en: { title: "🌸 Radha-Krishna Assistant 🌸", welcomePrompt: "Before starting, please press the button to activate audio.", startBtn: "Start", taskHeading: "📝 Add Task and Time", reminderBtn: "⏰ Set Reminder", updateBtn: "💾 Update", reminderUpdated: "Reminder updated!", speakerPrompt: "🎙️ Speak", settingsHeading: "⚙️ Settings", charSelection: "👫 Character Selection", langOption: "🌐 Language Option", taskManager: "📁 Task Manager", showTasks: "Show Task List", closeTasks: "Close Task List", snooze: "Snooze (5 min)", stop: "Stop", welcome: "Hello, I am your assistant.", reminderSet: "Reminder has been set!", snoozeSet: "Alarm will ring again in 5 minutes.", noReminders: "No reminders yet.", theme: "🎨 Theme", morning_greet: "Good morning!", afternoon_greet: "Good afternoon!", evening_greet: "Good evening!", routineTitle: "📅 Daily Routines", saveRoutine: "✅ Save Routines", wake: "Wake up", bath: "Take a bath", school: "Go to school", meal: "Eat food", homework: "Do homework", chores: "House chores", alarm1: "Alarm 1", alarm2: "Alarm 2", deleteConfirm: "Are you sure you want to delete this reminder?", speakListen: "Listening...", speakUnderstand: "Okay, now please set the time.", speakError: "Sorry, I could not understand.", speakWhat: "What do you want to be reminded of?", alarmText: "It's time for {task}!", micPermission: "Please allow microphone access to use voice typing.", micNotFound: "Microphone not found on your device.", audioPrompt: "Tap screen to enable sound!" }
+    };
+    const ROUTINES_DATA = { wake: "☀️", bath: "🚿", school: "🏫", meal: "🍲", homework: "📚", chores: "🧹" };
+
+    function smartSpeak(text, fallbackSoundElement = null) { if (!isAudioUnlocked) return; if (speechSynthSupported) { try { window.speechSynthesis.cancel(); const utter = new SpeechSynthesisUtterance(text); utter.lang = currentLang === 'hi' ? 'hi-IN' : 'en-US'; utter.pitch = currentCharacter === 'radha' ? 1.5 : 1.0; window.speechSynthesis.speak(utter); } catch (e) { console.error(e); } } else if (fallbackSoundElement) { fallbackSoundElement.play(); } }
+    
+    function stopAlarm(event) { if(event) event.stopPropagation(); if (vibrationInterval) clearInterval(vibrationInterval); if ('vibrate' in navigator) navigator.vibrate(0); if (progressiveAlarmInterval) clearInterval(progressiveAlarmInterval); elements.alarmSound.pause(); elements.alarmSound.currentTime = 0; elements.alarmOverlay.style.display = 'none'; elements.audioPrompt.style.display = 'none'; }
+
+    function triggerAlarm(reminder) { const alarmMessage = TRANSLATIONS[currentLang].alarmText.replace('{task}', reminder.task); elements.alarmText.textContent = alarmMessage; elements.alarmOverlay.style.display = 'flex'; smartSpeak(alarmMessage); if ('vibrate' in navigator) { vibrationInterval = setInterval(() => navigator.vibrate([400, 200, 400]), 1000); } let volume = 0.5; elements.alarmSound.volume = volume; elements.alarmSound.currentTime = 0; const playPromise = elements.alarmSound.play(); if (playPromise !== undefined) { playPromise.then(() => { elements.audioPrompt.style.display = 'none'; progressiveAlarmInterval = setInterval(() => { volume = Math.min(1.0, volume + 0.1); elements.alarmSound.volume = volume; if (volume >= 1.0) clearInterval(progressiveAlarmInterval); }, 1500); }).catch(error => { console.error("Audio autoplay failed:", error); elements.audioPrompt.style.display = 'block'; }); } }
+    
+    function checkReminders(now) { const currentTime = now.toTimeString().slice(0, 5); const routineAlarms = Object.values(routines).flat(); const allReminders = [...manualReminders, ...routineAlarms, ...snoozedReminders]; for (let i = allReminders.length - 1; i >= 0; i--) { const rem = allReminders[i]; if (rem.time === currentTime && !rem.triggeredToday) { rem.triggeredToday = true; if (rem.type === 'snooze') { const snoozedIndex = snoozedReminders.findIndex(s => s.id === rem.id); if(snoozedIndex > -1) snoozedReminders.splice(snoozedIndex, 1); } triggerAlarm(rem); break; } } if (currentTime === '00:00') { [...manualReminders, ...Object.values(routines).flat()].forEach(rem => rem.triggeredToday = false); localStorage.setItem(`app_reminders_${STORAGE_VERSION}`, JSON.stringify(manualReminders)); } }
+    function saveOrUpdateReminder() { const task = elements.taskInput.value.trim(); const time = elements.taskTime.value; if (!task || !time) return; const reminderId = editMode.active ? manualReminders[editMode.index].id : Date.now(); const reminder = { id: reminderId, task, time, type: 'manual', triggeredToday: false }; if (editMode.active) { manualReminders[editMode.index] = reminder; showToast('reminderUpdated'); smartSpeak(TRANSLATIONS[currentLang].reminderUpdated, elements.confirmationSound); } else { manualReminders.push(reminder); showToast('reminderSet'); smartSpeak(TRANSLATIONS[currentLang].reminderSet, elements.confirmationSound); } localStorage.setItem(`app_reminders_${STORAGE_VERSION}`, JSON.stringify(manualReminders)); exitEditMode(); if (isTaskManagerOpen) showTaskManager(); }
+    function deleteReminder(index) { if (confirm(TRANSLATIONS[currentLang].deleteConfirm)) { if (editMode.active && editMode.index === index) exitEditMode(); manualReminders.splice(index, 1); localStorage.setItem(`app_reminders_${STORAGE_VERSION}`, JSON.stringify(manualReminders)); showTaskManager(); } }
+    function snoozeReminder(event) { if(event) event.stopPropagation(); const SNOOZE_MINUTES = 5; const taskText = elements.alarmText.textContent; stopAlarm(); const now = new Date(); now.setMinutes(now.getMinutes() + SNOOZE_MINUTES); const snoozedTime = now.toTimeString().slice(0, 5); const taskRegex = TRANSLATIONS[currentLang].alarmText.replace('{task}', '(.*)'); const match = taskText.match(new RegExp(taskRegex)); const snoozedTask = match ? match[1] : taskText; snoozedReminders.push({ id: Date.now(), task: snoozedTask, time: snoozedTime, triggeredToday: false, type: 'snooze' }); showToast('snoozeSet'); }
+    function saveRoutine() { const newRoutines = {}; document.querySelectorAll('.routine-entry').forEach(entry => { const key = entry.dataset.key; if (entry.querySelector('input[type="checkbox"]').checked) { const alarms = []; const time1 = entry.querySelector(`#time_${key}_1`).value; const time2 = entry.querySelector(`#time_${key}_2`).value; const taskName = `${ROUTINES_DATA[key]} ${TRANSLATIONS[currentLang][key] || key}`; if (time1) alarms.push({ id: `routine_${key}_1`, task: taskName, time: time1, type: 'routine', triggeredToday: false }); if (time2) alarms.push({ id: `routine_${key}_2`, task: taskName, time: time2, type: 'routine', triggeredToday: false }); if (alarms.length > 0) newRoutines[key] = alarms; } }); routines = newRoutines; localStorage.setItem(`app_routines_${STORAGE_VERSION}`, JSON.stringify(routines)); showToast('reminderSet'); }
+    async function startListening() { if (!speechRecSupported) { return showToast("आपके ब्राउज़र में माइक की सुविधा उपलब्ध नहीं है।"); } if (!isAudioUnlocked) { unlockAllAudio(); return;} elements.taskInput.blur(); try { await navigator.mediaDevices.getUserMedia({ audio: true }); const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition; const recognition = new SpeechRecognition(); recognition.lang = currentLang === 'hi' ? 'hi-IN' : 'en-US'; elements.speakBtn.classList.add('listening'); elements.outputText.textContent = TRANSLATIONS[currentLang].speakListen; elements.outputText.style.display = 'block'; smartSpeak(TRANSLATIONS[currentLang].speakWhat); recognition.onresult = function(event) { const speechResult = event.results[0][0].transcript; const parsed = parseSpeechResult(speechResult); elements.taskInput.value = parsed.task || speechResult; if (parsed.time) { elements.taskTime.value = parsed.time; smartSpeak(TRANSLATIONS[currentLang].reminderSet); saveOrUpdateReminder(); } else { smartSpeak(TRANSLATIONS[currentLang].speakUnderstand); } }; recognition.onerror = (e) => { smartSpeak(TRANSLATIONS[currentLang].speakError); console.error('Speech recognition error:', e.error); }; recognition.onend = () => { elements.speakBtn.classList.remove('listening'); elements.outputText.style.display = 'none'; }; recognition.start(); } catch (err) { console.error("Microphone access error:", err); if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') { showToast('micPermission'); } else if (err.name === 'NotFoundError') { showToast('micNotFound'); } } }
+    function toggleSettings() { elements.settingsPanel.classList.toggle('open'); elements.overlay.style.display = elements.settingsPanel.classList.contains('open') ? 'block' : 'none'; }
+    function showToast(messageKey) { const message = TRANSLATIONS[currentLang][messageKey] || messageKey; elements.toastNotification.textContent = message; elements.toastNotification.classList.add('show'); setTimeout(() => { elements.toastNotification.classList.remove('show'); }, 3000); }
+    function showTaskManager() { if (isTaskManagerOpen) { elements.taskManagerList.innerHTML = ""; elements.showTasksBtn.textContent = TRANSLATIONS[currentLang].showTasks; isTaskManagerOpen = false; return; } if (manualReminders.length === 0) { elements.taskManagerList.innerHTML = `<p style="text-align:center; color:#888;">${TRANSLATIONS[currentLang].noReminders}</p>`; } else { let html = "<ul>"; manualReminders.sort((a,b) => a.time.localeCompare(b.time)).forEach((r, i) => { html += `<li><span>${r.time} - ${r.task}</span><span class="task-buttons"><button onclick="app.editReminder(${manualReminders.indexOf(r)})">✏️</button><button onclick="app.deleteReminder(${manualReminders.indexOf(r)})">❌</button></span></li>`; }); html += "</ul>"; elements.taskManagerList.innerHTML = html; } elements.showTasksBtn.textContent = TRANSLATIONS[currentLang].closeTasks; isTaskManagerOpen = true; }
+    function editReminder(index) { const reminderToEdit = manualReminders[index]; if (!reminderToEdit) return; elements.taskInput.value = reminderToEdit.task; elements.taskTime.value = reminderToEdit.time; editMode.active = true; editMode.index = index; elements.mainTaskBtn.textContent = TRANSLATIONS[currentLang].updateBtn; if(elements.settingsPanel.classList.contains('open')) toggleSettings(); window.scrollTo(0, 0); }
+    function exitEditMode() { editMode.active = false; editMode.index = null; elements.taskInput.value = ''; elements.taskTime.value = ''; elements.mainTaskBtn.textContent = TRANSLATIONS[currentLang].reminderBtn; }
+    function updateClock() { elements.clock.textContent = new Date().toLocaleTimeString('en-GB'); checkReminders(new Date()); }
+    function changeCharacter(char, silent = false) { currentCharacter = char; const isRadha = char === 'radha'; elements.characterDisplay.style.backgroundImage = isRadha ? `url('https://i.pinimg.com/originals/a1/35/a3/a135a34074213d2f9393a1027173775f.jpg')` : `url('https://i.pinimg.com/736x/f5/ec/8a/f5ec8a939446f2385c7f827988583416.jpg')`; elements.characterName.textContent = isRadha ? "राधा" : "कृष्ण"; document.documentElement.style.setProperty('--accent-color', isRadha ? 'var(--button-bg-radha)' : 'var(--button-bg-krishna)'); localStorage.setItem(`app_character_${STORAGE_VERSION}`, char); if (!silent) translateUI(currentLang); }
+    function changeLanguage(lang) { currentLang = lang; translateUI(lang); buildRoutineUI(); localStorage.setItem(`app_language_${STORAGE_VERSION}`, lang); smartSpeak(lang === 'hi' ? "भाषा हिंदी में बदल दी गई है" : "Language changed to English"); }
+    function translateUI(lang) { document.querySelectorAll('[data-lang-key]').forEach(el => { const key = el.dataset.langKey; if (TRANSLATIONS[lang]?.[key]) el.textContent = TRANSLATIONS[lang][key]; }); if (editMode.active) elements.mainTaskBtn.textContent = TRANSLATIONS[lang].updateBtn; }
+    function unlockAllAudio() { if (isAudioUnlocked) return; elements.alarmSound.play().catch(()=>{}); elements.alarmSound.pause(); elements.confirmationSound.play().catch(()=>{}); elements.confirmationSound.pause(); if (speechSynthSupported) { window.speechSynthesis.speak(new SpeechSynthesisUtterance(' ')); } isAudioUnlocked = true; console.log("Audio is now unlocked!"); elements.welcomeOverlay.style.display = 'none'; const currentHour = new Date().getHours(); let greetingKey = (currentHour >= 5 && currentHour < 12) ? 'morning_greet' : (currentHour >= 12 && currentHour < 17) ? 'afternoon_greet' : 'evening_greet'; setTimeout(() => smartSpeak(TRANSLATIONS[currentLang][greetingKey]), 200); }
+    
+    function init() {
+        elements = {
+            clock: document.getElementById('clock'), taskInput: document.getElementById('taskInput'), taskTime: document.getElementById('taskTime'), outputText: document.getElementById('outputText'), settingsPanel: document.getElementById('settingsPanel'), characterSelect: document.getElementById('characterSelect'), languageSelect: document.getElementById('languageSelect'), taskManagerList: document.getElementById('taskManagerList'), characterDisplay: document.getElementById('characterDisplay'), characterName: document.getElementById('characterName'), alarmSound: document.getElementById('alarmSound'), confirmationSound: document.getElementById('confirmationSound'), showTasksBtn: document.getElementById('showTasksBtn'), alarmOverlay: document.getElementById('alarmOverlay'), alarmText: document.getElementById('alarmText'), audioPrompt: document.getElementById('audio-prompt'), toastNotification: document.getElementById('toastNotification'), mainTaskBtn: document.getElementById('mainTaskBtn'), themeSwitch: document.getElementById('theme-switch'), routineContainer: document.getElementById('routineContainer'), overlay: document.getElementById('overlay'), speakBtn: document.getElementById('speakBtn'), welcomeOverlay: document.getElementById('welcome-overlay'), startAppBtn: document.getElementById('start-app-btn')
+        };
+        if (!speechRecSupported) { document.getElementById('speakerBox').style.display = 'none'; }
+        elements.startAppBtn.addEventListener('click', unlockAllAudio);
+        elements.alarmOverlay.addEventListener('click', () => { if (elements.alarmSound.paused) { elements.alarmSound.play().catch(e => console.error("Manual play failed:", e)); } });
+        const savedLang = localStorage.getItem(`app_language_${STORAGE_VERSION}`) || 'hi';
+        const savedChar = localStorage.getItem(`app_character_${STORAGE_VERSION}`) || 'radha';
+        const savedTheme = localStorage.getItem(`app_theme_${STORAGE_VERSION}`);
+        elements.languageSelect.value = savedLang;
+        elements.characterSelect.value = savedChar;
+        currentLang = savedLang;
+        manualReminders = JSON.parse(localStorage.getItem(`app_reminders_${STORAGE_VERSION}`)) || [];
+        routines = JSON.parse(localStorage.getItem(`app_routines_${STORAGE_VERSION}`)) || {};
+        changeCharacter(savedChar, true);
+        translateUI(savedLang);
+        if (savedTheme === 'dark') { document.body.classList.add('dark-mode'); elements.themeSwitch.checked = true; }
+        buildRoutineUI();
+        updateClock();
+        setInterval(updateClock, 1000);
+        elements.themeSwitch.addEventListener('change', (e) => { document.body.classList.toggle('dark-mode', e.target.checked); localStorage.setItem(`app_theme_${STORAGE_VERSION}`, e.target.checked ? 'dark' : 'light'); });
+        elements.characterSelect.onchange = () => changeCharacter(elements.characterSelect.value);
+        elements.languageSelect.onchange = () => changeLanguage(elements.languageSelect.value);
+    }
+    
+    function buildRoutineUI() {
+        elements.routineContainer.innerHTML = '';
+        for (const key in ROUTINES_DATA) {
+            const routineHTML = `<div class="routine-entry" data-key="${key}"><label class="main-label"><input type="checkbox" id="main_check_${key}"> ${ROUTINES_DATA[key]} <span data-lang-key="${key}">${TRANSLATIONS[currentLang][key]}</span></label><div class="time-input-group"><div><label data-lang-key="alarm1">${TRANSLATIONS[currentLang]['alarm1']}</label><input type="time" id="time_${key}_1"></div><div><label data-lang-key="alarm2">${TRANSLATIONS[currentLang]['alarm2']}</label><input type="time" id="time_${key}_2"></div></div></div>`;
+            elements.routineContainer.innerHTML += routineHTML;
+        }
+        for (const key in routines) {
+            const entryElement = document.querySelector(`.routine-entry[data-key="${key}"]`);
+            if (entryElement) {
+                entryElement.querySelector('input[type="checkbox"]').checked = true;
+                const alarms = routines[key];
+                if (alarms?.[0]?.time) entryElement.querySelector(`#time_${key}_1`).value = alarms[0].time;
+                if (alarms?.[1]?.time) entryElement.querySelector(`#time_${key}_2`).value = alarms[1].time;
+            }
+        }
+    }
+    
+    function parseSpeechResult(text) {
+        let task = text;
+        let time = null;
+        const timeRegex = /(\d{1,2})[: ](\d{2})?|(\d{1,2})\s*(बजे|o'clock|am|pm)/i;
+        const match = text.match(timeRegex);
+
+        if (match) {
+            let hour = parseInt(match[1] || match[3], 10);
+            let minute = parseInt(match[2], 10) || 0;
+
+            if (/pm|शाम|रात/i.test(match[0]) && hour < 12) {
+                hour += 12;
+            } else if (/am|सुबह/i.test(match[0]) && hour === 12) {
+                hour = 0; // Midnight case
+            } else if (currentLang === 'hi' && /दोपहर/i.test(match[0]) && hour < 12) {
+                hour += 12;
+            }
+            time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+            task = text.replace(timeRegex, '').replace(/ पर| at| के लिए| for| set reminder/gi, '').trim();
+        }
+        return { task, time };
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+    
+    return {
+        saveOrUpdateReminder, stopAlarm, snoozeReminder, startListening, toggleSettings, showTaskManager, deleteReminder, editReminder, saveRoutine
+    };
+})();
+</script>
+</body>
+</html>
